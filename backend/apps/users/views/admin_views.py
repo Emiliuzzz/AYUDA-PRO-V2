@@ -17,7 +17,6 @@ class AdminStatsView(APIView):
             total_users = User.objects.count()
             
             # Users by role
-            # Manually map role codes to display names if needed
             role_map = dict(User.Roles.choices)
             users_by_role_query = User.objects.values('role').annotate(count=Count('id'))
             users_by_role = [
@@ -25,8 +24,7 @@ class AdminStatsView(APIView):
                 for item in users_by_role_query
             ]
             
-            # New users per month (last 6 months)
-            # Fail-safe for monthly stats
+            # New users per month
             try:
                 users_per_month_query = User.objects.annotate(
                     month=TruncMonth('date_joined')
@@ -49,7 +47,18 @@ class AdminStatsView(APIView):
 
 class TutorApprovalView(APIView):
     permission_classes = [IsAdminUser]
-...
+
+    def get(self, request):
+        pending_tutors = Tutor.objects.filter(is_active=False)
+        serializer = TutorSerializer(pending_tutors, many=True)
+        return Response(serializer.data)
+
+    def post(self, request, pk):
+        try:
+            tutor = Tutor.objects.get(pk=pk)
+            tutor.is_active = True
+            tutor.save()
+            return Response({"message": f"Tutor {tutor.user.username} aprobado con éxito."})
         except Tutor.DoesNotExist:
             return Response({"error": "Tutor no encontrado."}, status=status.HTTP_404_NOT_FOUND)
 
