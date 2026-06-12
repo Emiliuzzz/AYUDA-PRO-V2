@@ -62,7 +62,11 @@ const BookingModal: React.FC<BookingModalProps> = ({ tutor, onClose, onSuccess }
         <div className="flex justify-between items-center p-4 border-b border-gray-100 bg-blue-50/50">
           <div>
             <h2 className="text-lg font-bold text-gray-900">Reservar Ayudantía</h2>
-            <p className="text-xs text-blue-600 font-medium">Con {tutor.user.first_name} {tutor.user.last_name}</p>
+            <p className="text-xs text-blue-600 font-medium">Con {
+              tutor.user.first_name || tutor.user.last_name 
+                ? `${tutor.user.first_name} ${tutor.user.last_name}`.trim()
+                : tutor.user.username
+            }</p>
           </div>
           <button onClick={onClose} className="p-1.5 hover:bg-white rounded-full transition-colors text-gray-400 hover:text-gray-600">
             <X className="w-5 h-5" />

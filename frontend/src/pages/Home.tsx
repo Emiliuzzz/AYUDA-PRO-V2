@@ -143,10 +143,15 @@ const Home: React.FC = () => {
             <div className="p-5">
               <div className="flex items-center gap-3 mb-4">
                 <div className="bg-blue-50 p-3 rounded-xl text-blue-600 font-bold">
-                  {tutor.user.first_name[0]}{tutor.user.last_name[0]}
+                  {tutor.user.first_name ? tutor.user.first_name[0] : tutor.user.username[0].toUpperCase()}
+                  {tutor.user.last_name ? tutor.user.last_name[0] : ''}
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900">{tutor.user.first_name} {tutor.user.last_name}</h3>
+                  <h3 className="font-bold text-gray-900">
+                    {tutor.user.first_name || tutor.user.last_name 
+                      ? `${tutor.user.first_name} ${tutor.user.last_name}`.trim()
+                      : tutor.user.username}
+                  </h3>
                   <div className="flex items-center gap-1 text-yellow-500 text-xs font-bold">
                     <Star className="w-3 h-3 fill-current" />
                     <span>{tutor.average_rating || 'Nuevo'}</span>

@@ -122,7 +122,11 @@ const Sessions: React.FC = () => {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-500">
                       <div className="flex items-center gap-2">
                         <User className="w-4 h-4 text-gray-400" />
-                        <span className="font-medium">Tutor:</span> {session.tutor.user.first_name} {session.tutor.user.last_name}
+                        <span className="font-medium">Tutor:</span> {
+                          session.tutor.user.first_name || session.tutor.user.last_name 
+                            ? `${session.tutor.user.first_name} ${session.tutor.user.last_name}`.trim()
+                            : session.tutor.user.username
+                        }
                       </div>
                       <div className="flex items-center gap-2">
                         <Clock className="w-4 h-4 text-gray-400" />
