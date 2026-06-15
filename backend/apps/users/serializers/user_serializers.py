@@ -5,7 +5,7 @@ from users.models.student import Student
 class UserSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'role', 'first_name', 'last_name', 'bio', 'phone', 'avatar', 'is_superuser', 'is_staff')
+        fields = ('id', 'username', 'email', 'role', 'first_name', 'last_name', 'bio', 'phone', 'avatar', 'is_superuser', 'is_staff', 'is_active')
 
 class StudentSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)

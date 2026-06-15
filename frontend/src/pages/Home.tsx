@@ -4,10 +4,12 @@ import { User, Star, Book, CheckCircle, TrendingUp, Users, Calendar as CalendarI
 import { useAuth } from '../context/AuthContext';
 import BookingModal from '../components/BookingModal';
 import SubjectRequestModal from '../components/SubjectRequestModal';
+import UserProfileModal from '../components/UserProfileModal';
 
 interface Tutor {
   id: number;
   user: {
+    id: number;
     username: string;
     first_name: string;
     last_name: string;
@@ -19,17 +21,27 @@ interface Tutor {
   total_reviews: number;
 }
 
+interface TutorStats {
+  average_rating: number;
+  active_students: number;
+  monthly_income: number;
+}
+
 const Home: React.FC = () => {
   const { user } = useAuth();
   const [tutors, setTutors] = useState<Tutor[]>([]);
+  const [tutorStats, setTutorStats] = useState<TutorStats | null>(null);
   const [loading, setLoading] = useState(true);
   const [selectedTutor, setSelectedTutor] = useState<Tutor | null>(null);
   const [showRequestModal, setShowRequestModal] = useState(false);
+  const [viewingProfileId, setViewingProfileId] = useState<number | null>(null);
   const [successMessage, setSuccessMessage] = useState('');
 
   useEffect(() => {
     if (user?.role === 'STUDENT' || user?.role === 'ADMIN') {
       fetchTutors();
+    } else if (user?.role === 'TUTOR') {
+      fetchTutorStats();
     } else {
       setLoading(false);
     }
@@ -38,12 +50,33 @@ const Home: React.FC = () => {
   const fetchTutors = async () => {
     try {
       const response = await api.get('/tutors/');
-      setTutors(response.data);
+      if (Array.isArray(response.data)) {
+        setTutors(response.data);
+      }
     } catch (error) {
       console.error('Error fetching tutors', error);
     } finally {
       setLoading(false);
     }
+  };
+
+  const fetchTutorStats = async () => {
+    try {
+      const response = await api.get('/tutors/me/stats/');
+      setTutorStats(response.data);
+    } catch (error) {
+      console.error('Error fetching tutor stats', error);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const formatCLP = (amount: number) => {
+    return new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: 'CLP',
+      minimumFractionDigits: 0,
+    }).format(amount);
   };
 
   const handleBookingSuccess = () => {
@@ -57,9 +90,9 @@ const Home: React.FC = () => {
   };
 
   if (loading) return (
-    <div className="flex flex-col items-center justify-center py-10">
-      <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600 mb-2"></div>
-      <p className="text-gray-500 text-sm">Cargando...</p>
+    <div className="flex flex-col items-center justify-center py-20">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+      <p className="text-gray-500 font-medium">Cargando tu experiencia Ayuda Pro...</p>
     </div>
   );
 
@@ -68,7 +101,7 @@ const Home: React.FC = () => {
     return (
       <div className="px-4 py-6">
         <header className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Bienvenido de nuevo, Prof. {user.first_name}</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Bienvenido de nuevo, Prof. {user.first_name || user.username}</h1>
           <p className="text-gray-500">Aquí tienes un resumen de tu actividad profesional.</p>
         </header>
 
@@ -77,21 +110,21 @@ const Home: React.FC = () => {
             <div className="bg-blue-100 p-3 rounded-xl text-blue-600"><Star className="w-6 h-6 fill-current" /></div>
             <div>
               <p className="text-gray-500 text-xs font-bold uppercase">Calificación</p>
-              <h3 className="text-xl font-black">4.9 / 5.0</h3>
+              <h3 className="text-xl font-black">{tutorStats?.average_rating || 0} / 5.0</h3>
             </div>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
             <div className="bg-green-100 p-3 rounded-xl text-green-600"><Users className="w-6 h-6" /></div>
             <div>
               <p className="text-gray-500 text-xs font-bold uppercase">Alumnos</p>
-              <h3 className="text-xl font-black">12 Activos</h3>
+              <h3 className="text-xl font-black">{tutorStats?.active_students || 0} Activos</h3>
             </div>
           </div>
           <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
             <div className="bg-purple-100 p-3 rounded-xl text-purple-600"><TrendingUp className="w-6 h-6" /></div>
             <div>
               <p className="text-gray-500 text-xs font-bold uppercase">Ingresos Mes</p>
-              <h3 className="text-xl font-black">$145.000</h3>
+              <h3 className="text-xl font-black">{formatCLP(tutorStats?.monthly_income || 0)}</h3>
             </div>
           </div>
         </div>
@@ -138,16 +171,22 @@ const Home: React.FC = () => {
       </header>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {tutors.map((tutor) => (
+        {Array.isArray(tutors) && tutors.map((tutor) => (
           <div key={tutor.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:shadow-md transition-all">
             <div className="p-5">
               <div className="flex items-center gap-3 mb-4">
-                <div className="bg-blue-50 p-3 rounded-xl text-blue-600 font-bold">
+                <div 
+                  className="bg-blue-50 p-3 rounded-xl text-blue-600 font-bold cursor-pointer hover:bg-blue-600 hover:text-white transition-all"
+                  onClick={() => setViewingProfileId(tutor.user.id)}
+                >
                   {tutor.user.first_name ? tutor.user.first_name[0] : tutor.user.username[0].toUpperCase()}
                   {tutor.user.last_name ? tutor.user.last_name[0] : ''}
                 </div>
                 <div>
-                  <h3 className="font-bold text-gray-900">
+                  <h3 
+                    className="font-bold text-gray-900 cursor-pointer hover:text-blue-600 transition-colors"
+                    onClick={() => setViewingProfileId(tutor.user.id)}
+                  >
                     {tutor.user.first_name || tutor.user.last_name 
                       ? `${tutor.user.first_name} ${tutor.user.last_name}`.trim()
                       : tutor.user.username}
@@ -165,7 +204,7 @@ const Home: React.FC = () => {
               </p>
 
               <div className="flex flex-wrap gap-1.5 mb-5">
-                {tutor.subjects.map((sub, idx) => (
+                {Array.isArray(tutor.subjects) && tutor.subjects.map((sub, idx) => (
                   <span key={idx} className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded-md flex items-center gap-1">
                     <Book className="w-2.5 h-2.5" />
                     {sub.name}
@@ -175,7 +214,7 @@ const Home: React.FC = () => {
 
               <div className="pt-4 border-t border-gray-50 flex items-center justify-between">
                 <div>
-                  <span className="text-lg font-black text-gray-900">${tutor.hourly_rate}</span>
+                  <span className="text-lg font-black text-gray-900">{formatCLP(Number(tutor.hourly_rate))}</span>
                   <span className="text-gray-400 text-[10px] ml-1">/hora</span>
                 </div>
                 {user?.role === 'STUDENT' && (
@@ -204,6 +243,13 @@ const Home: React.FC = () => {
         <SubjectRequestModal 
           onClose={() => setShowRequestModal(false)}
           onSuccess={handleRequestSuccess}
+        />
+      )}
+
+      {viewingProfileId && (
+        <UserProfileModal 
+          userId={viewingProfileId}
+          onClose={() => setViewingProfileId(null)}
         />
       )}
     </div>

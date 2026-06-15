@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import api from '../api/axios';
-import { Calendar, Clock, BookOpen, User, Tag, AlertCircle, FileText, Download } from 'lucide-react';
+import { Calendar, Clock, BookOpen, User, Tag, AlertCircle, FileText, Download, Star } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useAuth } from '../context/AuthContext';
+import ReviewModal from '../components/ReviewModal';
+import UserProfileModal from '../components/UserProfileModal';
 
 interface Material {
   id: number;
@@ -16,12 +19,17 @@ interface Session {
   subject: { name: string };
   tutor: {
     user: {
+      id: number;
       first_name: string;
       last_name: string;
+      username: string;
     }
   };
   student: {
     user: {
+      id: number;
+      first_name: string;
+      last_name: string;
       username: string;
     }
   };
@@ -48,8 +56,11 @@ const statusLabels: { [key: string]: string } = {
 };
 
 const Sessions: React.FC = () => {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [selectedSessionForReview, setSelectedSessionForReview] = useState<Session | null>(null);
+  const [viewingProfileId, setViewingProfileId] = useState<number | null>(null);
 
   useEffect(() => {
     fetchSessions();
@@ -60,19 +71,19 @@ const Sessions: React.FC = () => {
       const response = await api.get('/sessions/');
       const sessionsData = response.data;
       
-      // Fetch materials for each session
-      const sessionsWithMaterials = await Promise.all(
-        sessionsData.map(async (s: Session) => {
-          try {
-            const mRes = await api.get(`/sessions/${s.id}/materials/`);
-            return { ...s, materials: mRes.data };
-          } catch {
-            return s;
-          }
-        })
-      );
-      
-      setSessions(sessionsWithMaterials);
+      if (Array.isArray(sessionsData)) {
+        const sessionsWithMaterials = await Promise.all(
+          sessionsData.map(async (s: Session) => {
+            try {
+              const mRes = await api.get(`/sessions/${s.id}/materials/`);
+              return { ...s, materials: Array.isArray(mRes.data) ? mRes.data : [] };
+            } catch {
+              return { ...s, materials: [] };
+            }
+          })
+        );
+        setSessions(sessionsWithMaterials);
+      }
     } catch (error) {
       console.error('Error fetching sessions', error);
     } finally {
@@ -81,8 +92,9 @@ const Sessions: React.FC = () => {
   };
 
   if (loading) return (
-    <div className="flex justify-center py-20">
-      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+    <div className="flex flex-col items-center justify-center py-20">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+      <p className="text-gray-500 font-medium">Cargando tus sesiones académicas...</p>
     </div>
   );
 
@@ -93,7 +105,7 @@ const Sessions: React.FC = () => {
         <p className="text-gray-600 text-lg">Gestiona tus próximas ayudantías y revisa tu historial académico.</p>
       </header>
 
-      {sessions.length > 0 ? (
+      {Array.isArray(sessions) && sessions.length > 0 ? (
         <div className="grid gap-6">
           {sessions.map((session) => (
             <div key={session.id} className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden hover:border-blue-100 transition-colors">
@@ -110,22 +122,28 @@ const Sessions: React.FC = () => {
                   
                   <div className="space-y-3">
                     <div className="flex items-center gap-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColors[session.status]}`}>
-                        {statusLabels[session.status]}
+                      <span className={`px-3 py-1 rounded-full text-xs font-bold border ${statusColors[session.status] || 'bg-gray-100'}`}>
+                        {statusLabels[session.status] || session.status}
                       </span>
                     </div>
                     
                     <h3 className="text-xl font-bold text-gray-900 flex items-center gap-2">
-                      {session.subject.name}
+                      {session.subject?.name || 'Materia'}
                     </h3>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-6 gap-y-2 text-sm text-gray-500">
-                      <div className="flex items-center gap-2">
-                        <User className="w-4 h-4 text-gray-400" />
-                        <span className="font-medium">Tutor:</span> {
-                          session.tutor.user.first_name || session.tutor.user.last_name 
-                            ? `${session.tutor.user.first_name} ${session.tutor.user.last_name}`.trim()
-                            : session.tutor.user.username
+                      <div 
+                        className="flex items-center gap-2 cursor-pointer hover:text-blue-600 transition-colors group"
+                        onClick={() => {
+                          const id = user?.role === 'STUDENT' ? session.tutor?.user?.id : session.student?.user?.id;
+                          if (id) setViewingProfileId(id);
+                        }}
+                      >
+                        <User className="w-4 h-4 text-gray-400 group-hover:text-blue-500" />
+                        <span className="font-medium">{user?.role === 'STUDENT' ? 'Tutor:' : 'Alumno:'}</span> {
+                          user?.role === 'STUDENT' 
+                            ? (session.tutor?.user?.first_name || session.tutor?.user?.username || 'Tutor')
+                            : (session.student?.user?.first_name || session.student?.user?.username || 'Alumno')
                         }
                       </div>
                       <div className="flex items-center gap-2">
@@ -147,10 +165,17 @@ const Sessions: React.FC = () => {
                       Unirse a Clase
                     </a>
                   )}
+                  {user?.role === 'STUDENT' && session.status === 'COMPLETED' && (
+                    <button 
+                      onClick={() => setSelectedSessionForReview(session)}
+                      className="bg-yellow-500 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-yellow-600 transition-all flex items-center justify-center gap-2"
+                    >
+                      <Star className="w-4 h-4" /> Calificar Clase
+                    </button>
+                  )}
                 </div>
               </div>
               
-              {/* Materials Section */}
               {session.materials && session.materials.length > 0 && (
                 <div className="bg-blue-50/30 px-6 md:px-8 py-4 border-t border-blue-50">
                   <p className="text-xs text-blue-600 font-bold uppercase tracking-wider mb-3 flex items-center gap-1.5">
@@ -197,6 +222,26 @@ const Sessions: React.FC = () => {
             Explorar Tutores
           </button>
         </div>
+      )}
+
+      {selectedSessionForReview && (
+        <ReviewModal 
+          sessionId={selectedSessionForReview.id}
+          subjectName={selectedSessionForReview.subject?.name || 'Materia'}
+          tutorName={selectedSessionForReview.tutor?.user?.first_name || selectedSessionForReview.tutor?.user?.username || 'Tutor'}
+          onClose={() => setSelectedSessionForReview(null)}
+          onSuccess={() => {
+            setSelectedSessionForReview(null);
+            fetchSessions();
+          }}
+        />
+      )}
+
+      {viewingProfileId && (
+        <UserProfileModal 
+          userId={viewingProfileId}
+          onClose={() => setViewingProfileId(null)}
+        />
       )}
     </div>
   );

@@ -32,6 +32,11 @@ const Navbar: React.FC = () => {
                   Mi Dashboard
                 </Link>
               )}
+              {(user?.role === 'STUDENT' || user?.role === 'ADMIN' || user?.is_superuser || user?.role === 'TUTOR') && (
+                <Link to="/marketplace" className="text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium">
+                  Mercado de Clases
+                </Link>
+              )}
               {(user?.role === 'STUDENT' || user?.role === 'ADMIN' || user?.is_superuser) && (
                 <Link to="/" className="text-gray-900 inline-flex items-center px-1 pt-1 border-b-2 border-blue-500 text-sm font-medium">
                   Explorar Tutores
@@ -40,6 +45,11 @@ const Navbar: React.FC = () => {
               {(user?.role === 'STUDENT' || user?.role === 'TUTOR') && (
                 <Link to="/sessions" className="text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium">
                   Mis Sesiones
+                </Link>
+              )}
+              {(user?.role === 'STUDENT' || user?.role === 'TUTOR') && (
+                <Link to="/support" className="text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium">
+                  Soporte
                 </Link>
               )}
             </div>

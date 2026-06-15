@@ -7,9 +7,12 @@ import Sessions from './pages/Sessions';
 import Profile from './pages/Profile';
 import AdminDashboard from './pages/AdminDashboard';
 import TutorDashboard from './pages/TutorDashboard';
+import Marketplace from './pages/Marketplace';
+import Support from './pages/Support';
 import MainLayout from './layout/MainLayout';
 
 function App() {
+  console.log("App starting...");
   return (
     <Router>
       <AuthProvider>
@@ -53,6 +56,22 @@ function App() {
             element={
               <MainLayout>
                 <TutorDashboard />
+              </MainLayout>
+            } 
+          />
+          <Route 
+            path="/marketplace" 
+            element={
+              <MainLayout>
+                <Marketplace />
+              </MainLayout>
+            } 
+          />
+          <Route 
+            path="/support" 
+            element={
+              <MainLayout>
+                <Support />
               </MainLayout>
             } 
           />
