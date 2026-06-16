@@ -3,6 +3,8 @@ import api from '../api/axios';
 import { Calendar, Clock, User, BookOpen, CheckCircle, Upload, FileText } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 import { es } from 'date-fns/locale';
+import { useAuth } from '../context/AuthContext';
+import { Navigate } from 'react-router-dom';
 
 interface Session {
   id: number;
@@ -21,6 +23,7 @@ interface Session {
 }
 
 const TutorDashboard: React.FC = () => {
+  const { user } = useAuth();
   const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
   const [uploadingFor, setUploadingFor] = useState<number | null>(null);
@@ -28,13 +31,19 @@ const TutorDashboard: React.FC = () => {
   const [title, setTitle] = useState('');
 
   useEffect(() => {
-    fetchSessions();
-  }, []);
+    if (user?.role === 'TUTOR' && user?.is_approved) {
+      fetchSessions();
+    } else if (user) {
+      setLoading(false);
+    }
+  }, [user]);
 
   const fetchSessions = async () => {
     try {
       const response = await api.get('/sessions/');
-      setSessions(response.data);
+      if (Array.isArray(response.data)) {
+        setSessions(response.data);
+      }
     } catch (error) {
       console.error('Error fetching sessions', error);
     } finally {
@@ -72,7 +81,16 @@ const TutorDashboard: React.FC = () => {
     }
   };
 
-  if (loading) return <div className="p-8 text-center">Cargando dashboard de tutor...</div>;
+  if (loading) return (
+    <div className="flex flex-col items-center justify-center py-20">
+      <div className="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600 mb-4"></div>
+      <p className="text-gray-500">Cargando tu panel de tutor...</p>
+    </div>
+  );
+
+  if (user?.role === 'TUTOR' && !user.is_approved) {
+    return <Navigate to="/" />;
+  }
 
   return (
     <div className="space-y-8 p-4">
@@ -95,7 +113,7 @@ const TutorDashboard: React.FC = () => {
                     <span className="bg-gray-100 text-gray-600 text-[10px] font-bold px-2 py-0.5 rounded uppercase">
                       {session.status}
                     </span>
-                    <h3 className="font-bold text-gray-900">{session.subject.name}</h3>
+                    <h3 className="font-bold text-gray-900">{session.subject?.name}</h3>
                   </div>
                   <div className="text-sm text-gray-500 flex flex-col gap-1">
                     <div className="flex items-center gap-2"><User className="w-3.5 h-3.5" /> Alumno: {session.student.user.first_name} {session.student.user.last_name}</div>

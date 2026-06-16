@@ -98,6 +98,33 @@ const Home: React.FC = () => {
 
   // VISTA PARA TUTORES
   if (user?.role === 'TUTOR') {
+    if (!user.is_approved) {
+      return (
+        <div className="flex flex-col items-center justify-center py-20 px-4 text-center animate-in fade-in duration-700">
+          <div className="bg-yellow-50 p-8 rounded-full mb-8 shadow-inner">
+            <Clock className="w-16 h-12 text-yellow-600 animate-pulse" />
+          </div>
+          <h1 className="text-4xl font-black text-gray-900 mb-4">Perfil en Revisión</h1>
+          <p className="text-gray-500 max-w-lg mx-auto text-lg leading-relaxed">
+            ¡Bienvenido a Ayuda Pro! Un administrador está validando tu perfil de tutor. 
+            Te daremos acceso completo a tu dashboard una vez que seas aprobado.
+          </p>
+          <div className="mt-12 p-6 bg-white rounded-3xl border border-gray-100 shadow-sm max-w-md w-full">
+            <h3 className="font-bold text-gray-900 mb-2">¿Qué puedes hacer mientras?</h3>
+            <p className="text-sm text-gray-500">
+              Asegúrate de que tu perfil esté completo. Los administradores valoran las biografías detalladas y la experiencia previa.
+            </p>
+            <button 
+              onClick={() => window.location.href = '/profile'}
+              className="mt-6 w-full bg-gray-900 text-white py-3 rounded-xl font-bold hover:bg-black transition-all"
+            >
+              Completar mi Perfil
+            </button>
+          </div>
+        </div>
+      );
+    }
+
     return (
       <div className="px-4 py-6">
         <header className="mb-8">

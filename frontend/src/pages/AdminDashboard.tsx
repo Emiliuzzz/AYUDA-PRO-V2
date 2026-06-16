@@ -26,6 +26,7 @@ interface User {
 interface Tutor {
   id: number;
   user: {
+    id: number;
     username: string;
     first_name: string;
     last_name: string;
@@ -39,6 +40,7 @@ interface SubjectRequest {
   id: number;
   student: {
     user: {
+      id: number;
       first_name: string;
       last_name: string;
       username: string;
@@ -105,9 +107,9 @@ const AdminDashboard: React.FC = () => {
       setUsers(Array.isArray(usersRes.data) ? usersRes.data : []);
       setSupportTickets(Array.isArray(supportRes.data) ? supportRes.data : []);
       
-    } catch (error: any) {
-      console.error('Error fetching admin data', error);
-      setError(error.response?.data?.detail || error.response?.data?.error || 'Error al cargar los datos del administrador.');
+    } catch (err: any) {
+      console.error('Error fetching admin data', err);
+      setError(err.response?.data?.detail || err.response?.data?.error || 'Error al cargar los datos del administrador.');
     } finally {
       setLoading(false);
     }
@@ -117,7 +119,7 @@ const AdminDashboard: React.FC = () => {
     try {
       await api.post(`/users/admin/tutors/${id}/approve/`);
       fetchData();
-    } catch (error) {
+    } catch (err) {
       alert('Error al aprobar tutor');
     }
   };
@@ -126,9 +128,17 @@ const AdminDashboard: React.FC = () => {
     try {
       await api.patch(`/subjects/requests/${id}/action/`, { status });
       fetchData();
-    } catch (error) {
+    } catch (err) {
       alert('Error al actualizar solicitud');
     }
+  };
+
+  const formatCLP = (amount: number) => {
+    return new Intl.NumberFormat('es-CL', {
+      style: 'currency',
+      currency: 'CLP',
+      minimumFractionDigits: 0,
+    }).format(amount);
   };
 
   const navigateToUsers = (role?: string) => {
@@ -200,6 +210,7 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Tab: Overview */}
         {activeTab === 'overview' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <header className="mb-8">
@@ -225,7 +236,7 @@ const AdminDashboard: React.FC = () => {
                   onClick={() => navigateToUsers(roleStat.role)}
                   className="bg-white p-8 rounded-3xl shadow-sm border border-gray-100 flex items-center gap-6 cursor-pointer hover:border-purple-500 hover:shadow-md transition-all group"
                 >
-                  <div className="bg-purple-100 p-4 rounded-2xl text-purple-600 group-hover:bg-purple-600 group-hover:text-white transition-colors"><UserCheck className="w-8 h-8" /></div>
+                  <div className="bg-purple-100 p-4 rounded-2xl text-purple-600"><UserCheck className="w-8 h-8" /></div>
                   <div>
                     <p className="text-gray-500 text-xs font-bold uppercase tracking-wider">{roleLabels[roleStat.role] || roleStat.role}</p>
                     <h3 className="text-3xl font-black text-gray-900">{roleStat.count}</h3>
@@ -236,6 +247,7 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Tab: Users */}
         {activeTab === 'users' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <header className="flex flex-col md:flex-row justify-between items-start md:items-end gap-4 mb-8">
@@ -381,15 +393,60 @@ const AdminDashboard: React.FC = () => {
           </div>
         )}
 
+        {/* Tab: Approvals */}
         {activeTab === 'approvals' && (
           <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
             <header className="mb-8">
               <h1 className="text-3xl font-black text-gray-900">Altas de Tutores</h1>
               <p className="text-gray-500">Revisa y aprueba nuevos profesionales para la plataforma.</p>
             </header>
-            <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm p-20 text-center text-gray-400">
-              <p className="font-bold mb-2">Sección de Altas Integrada</p>
-              <p className="text-sm">Por ahora, utiliza la Gestión de Usuarios para ver y activar perfiles.</p>
+
+            <div className="bg-white rounded-3xl border border-gray-100 overflow-hidden shadow-sm">
+              {pendingTutors.length > 0 ? (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-left text-sm">
+                    <thead>
+                      <tr className="text-xs font-bold text-gray-400 uppercase tracking-widest border-b border-gray-50 bg-gray-50/50">
+                        <th className="px-6 py-4">Tutor</th>
+                        <th className="px-6 py-4 text-center">Email</th>
+                        <th className="px-6 py-4 text-center">Tarifa x Hora</th>
+                        <th className="px-6 py-4 text-right">Acciones</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-50">
+                      {pendingTutors.map((tutor) => (
+                        <tr key={tutor.id} className="hover:bg-gray-50/50 transition-colors">
+                          <td className="px-6 py-4">
+                            <button 
+                              onClick={() => setViewingProfileId(tutor.user.id)}
+                              className="font-bold text-gray-900 hover:text-blue-600 text-left transition-colors group"
+                            >
+                              {tutor.user.first_name} {tutor.user.last_name}
+                              <span className="block text-[10px] text-blue-500 font-bold uppercase opacity-0 group-hover:opacity-100 transition-opacity">Ver Perfil</span>
+                            </button>
+                            <p className="text-xs text-gray-400">@{tutor.user.username}</p>
+                          </td>
+                          <td className="px-6 py-4 text-gray-600 text-center">{tutor.user.email}</td>
+                          <td className="px-6 py-4 font-black text-gray-900 text-center">{formatCLP(Number(tutor.hourly_rate))}</td>
+                          <td className="px-6 py-4 text-right">
+                            <button 
+                              onClick={() => approveTutor(tutor.id)}
+                              className="bg-blue-600 text-white px-6 py-2 rounded-xl text-xs font-bold hover:bg-blue-700 transition-all shadow-lg shadow-blue-100 flex items-center gap-2 ml-auto"
+                            >
+                              <CheckCircle className="w-4 h-4" /> Aprobar Alta
+                            </button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <div className="p-20 text-center text-gray-400 font-bold flex flex-col items-center gap-4">
+                  <div className="bg-gray-50 p-4 rounded-full"><UserCheck className="w-10 h-10 text-gray-200" /></div>
+                  <p>No hay tutores pendientes de aprobación en este momento.</p>
+                </div>
+              )}
             </div>
           </div>
         )}

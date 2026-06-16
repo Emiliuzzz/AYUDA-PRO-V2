@@ -27,12 +27,12 @@ const Navbar: React.FC = () => {
                   Panel Admin
                 </Link>
               )}
-              {user?.role === 'TUTOR' && (
+              {user?.role === 'TUTOR' && user?.is_approved && (
                 <Link to="/tutor" className="text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium">
                   Mi Dashboard
                 </Link>
               )}
-              {(user?.role === 'STUDENT' || user?.role === 'ADMIN' || user?.is_superuser || user?.role === 'TUTOR') && (
+              {(user?.role === 'STUDENT' || user?.role === 'ADMIN' || user?.is_superuser || (user?.role === 'TUTOR' && user?.is_approved)) && (
                 <Link to="/marketplace" className="text-gray-500 hover:text-gray-700 inline-flex items-center px-1 pt-1 border-b-2 border-transparent text-sm font-medium">
                   Mercado de Clases
                 </Link>

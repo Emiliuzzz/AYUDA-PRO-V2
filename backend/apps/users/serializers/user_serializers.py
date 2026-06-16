@@ -3,9 +3,15 @@ from users.models import User
 from users.models.student import Student
 
 class UserSerializer(serializers.ModelSerializer):
+    is_approved = serializers.SerializerMethodField()
     class Meta:
         model = User
-        fields = ('id', 'username', 'email', 'role', 'first_name', 'last_name', 'bio', 'phone', 'avatar', 'is_superuser', 'is_staff', 'is_active')
+        fields = ('id', 'username', 'email', 'role', 'first_name', 'last_name', 'bio', 'phone', 'avatar', 'is_superuser', 'is_staff', 'is_active', 'is_approved')
+
+    def get_is_approved(self, obj):
+        if obj.role == 'TUTOR' and hasattr(obj, 'tutor_profile'):
+            return obj.tutor_profile.is_active
+        return True
 
 class StudentSerializer(serializers.ModelSerializer):
     user = UserSerializer(read_only=True)
